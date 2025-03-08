@@ -14,8 +14,8 @@ public class ArmSubsystem extends SubsystemBase {
        
     }
 
-    public void moveArm(double position) {
-        armMotor.setControl(positionControl.withPosition(position));
+    public void moveArm() {
+        armMotor.set(5);
     }
 
     public void stopArm() {
