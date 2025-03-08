@@ -9,31 +9,35 @@ import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.swerve.SwerveDrivetrainConstants;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import com.ctre.phoenix6.swerve.SwerveRequest;
-import com.ctre.phoenix6.hardware.Pigeon2;
+import com.ctre.phoenix6.hardware.Pigeon2;  
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 
+
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
-
 import frc.robot.LimelightHelpers;
-import frc.robot.generated.TunerConstants;
 import frc.robot.generated.TunerConstants.TunerSwerveDrivetrain;
+import frc.robot.generated.TunerConstants;
+
 
 /**
  * Class that extends the Phoenix 6 SwerveDrivetrain class and implements
@@ -120,9 +124,23 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
     /* The SysId routine to test */
     private SysIdRoutine m_sysIdRoutineToApply = m_sysIdRoutineTranslation;
+    private SwerveDrivePoseEstimator m_poseEstimator = new SwerveDrivePoseEstimator(
+                                                                                    getKinematics(), // swerve drive kinematics
+                                                                                    kBlueAlliancePerspectiveRotation,  // current gyro angle
+                                                                                    new SwerveModulePosition[] // swerve module pose
+                                                                                                                {
+                                                                                                                    getModule(0).getPosition(true),
+                                                                                                                    getModule(1).getPosition(true), 
+                                                                                                                    getModule(2).getPosition(true), 
+                                                                                                                    getModule(3).getPosition(true)
+                                                                                                                },
+                                                                                    new Pose2d(), // init pose
+                                                                                    VecBuilder.fill(0.05,0.05,Units.degreesToRadians(5)), // odometry errors
+                                                                                    VecBuilder.fill(0.5,0.5,Units.degreesToRadians(30))); // april tag errors
+                                                                                    
 
-    private SwerveDrivePoseEstimator m_poseEstimator;
-    private Pigeon2 m_gyro;
+    private Pigeon2 m_gyro = getPigeon2();
+
 
     /**
      * Constructs a CTRE SwerveDrivetrain using the specified constants.
@@ -139,7 +157,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         SwerveModuleConstants<?, ?, ?>... modules
     ) {
         super(drivetrainConstants, modules);
-        m_gyro = new Pigeon2(TunerConstants.kPigeonId); // Initialize the Pigeon2 gyro
         if (Utils.isSimulation()) {
             startSimThread();
         }
@@ -165,7 +182,6 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         SwerveModuleConstants<?, ?, ?>... modules
     ) {
         super(drivetrainConstants, odometryUpdateFrequency, modules);
-        m_gyro = new Pigeon2(TunerConstants.kPigeonId); // Initialize the Pigeon2 gyro
         if (Utils.isSimulation()) {
             startSimThread();
         }
@@ -200,18 +216,18 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         SwerveModuleConstants<?, ?, ?>... modules
     ) {
         super(drivetrainConstants, odometryUpdateFrequency, odometryStandardDeviation, visionStandardDeviation, modules);
-        m_gyro = new Pigeon2(TunerConstants.kPigeonId); // Initialize the Pigeon2 gyro
         if (Utils.isSimulation()) {
             startSimThread();
         }
         configureAutoBuilder();
     }
-    
+
     private void configureAutoBuilder() {
         try {
             var config = RobotConfig.fromGUISettings();
             AutoBuilder.configure(
-                () -> m_poseEstimator.getEstimatedPosition(),   // Supplier of current robot pose
+                () -> getState().Pose,
+                // () -> m_poseEstimator.getEstimatedPosition(),   // Supplier of current robot pose
                 this::resetPose,         // Consumer for seeding pose against auto
                 () -> getState().Speeds, // Supplier of current robot speeds
                 // Consumer of ChassisSpeeds and feedforwards to drive the robot
@@ -270,6 +286,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
     @Override
     public void periodic() {
+        // System.out.println("Pose Estimator: " + m_poseEstimator);
+        // System.out.println("Gyro: " + m_gyro);
+        // System.out.println("Pose Estimated Position " + m_poseEstimator.getEstimatedPosition());
         /*
          * Periodically try to apply the operator perspective.
          * If we haven't applied the operator perspective before, then we should apply it regardless of DS state.
@@ -277,6 +296,11 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
          * Otherwise, only check and apply the operator perspective if the DS is disabled.
          * This ensures driving behavior doesn't change until an explicit disable event occurs during testing.
          */
+
+
+
+
+
         if (!m_hasAppliedOperatorPerspective || DriverStation.isDisabled()) {
             DriverStation.getAlliance().ifPresent(allianceColor -> {
                 setOperatorPerspectiveForward(
@@ -286,8 +310,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
                 );
                 m_hasAppliedOperatorPerspective = true;
             });
-        }
-
+        }   
         // Integrate Limelight vision updates
         LimelightHelpers.SetRobotOrientation("limelight", m_poseEstimator.getEstimatedPosition().getRotation().getDegrees(), 0, 0, 0, 0, 0);
         LimelightHelpers.PoseEstimate mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight");
@@ -307,8 +330,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
                 mt2.pose,
                 mt2.timestampSeconds);
         }
+
+
     }
-    
 
     private void startSimThread() {
         m_lastSimTime = Utils.getCurrentTimeSeconds();

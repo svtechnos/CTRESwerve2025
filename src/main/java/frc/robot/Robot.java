@@ -7,9 +7,21 @@ package frc.robot;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import au.grapplerobotics.LaserCan;
-import au.grapplerobotics.ConfigurationFailedException;
+import frc.robot.LimelightHelpers.PoseEstimate;
+import edu.wpi.first.wpilibj.DataLogManager;
+import edu.wpi.first.util.datalog.DoubleLogEntry;
 
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Twist2d;
+import edu.wpi.first.util.datalog.DoubleLogEntry;
+import edu.wpi.first.wpilibj.TimedRobot;
+import frc.robot.Telemetry;
+
+
+
+// import au.grapplerobotics.LaserCan;
+// import au.grapplerobotics.ConfigurationFailedException;
+ 
 public class Robot extends TimedRobot {
   // private LaserCan lc;
   
@@ -17,12 +29,28 @@ public class Robot extends TimedRobot {
 
   private final RobotContainer m_robotContainer;
 
+  private DoubleLogEntry txLog;
+  private DoubleLogEntry poseXLog;
+  private DoubleLogEntry poseYLog;
+  private DoubleLogEntry poseRotationLog;
+
+
   public Robot() {
     m_robotContainer = new RobotContainer();
   }
 
   @Override
   public void robotInit() {
+    DataLogManager.start(); 
+    DataLogManager.log("Started");
+    txLog = new DoubleLogEntry(DataLogManager.getLog(), "Limelight/tx");
+    poseXLog = new DoubleLogEntry(DataLogManager.getLog(), "Limelight/botpose_orb_wpiblue/X");
+    poseYLog = new DoubleLogEntry(DataLogManager.getLog(), "Limelight/botpose_orb_wpiblue/Y");
+    poseRotationLog = new DoubleLogEntry(DataLogManager.getLog(), "Limelight/botpose_orb_wpiblue/Rotation");
+
+    
+
+
     // lc = new LaserCan(0);
     // // Optionally initialise the settings of the LaserCAN, if you haven't already done so in GrappleHook
     // try {
@@ -32,17 +60,44 @@ public class Robot extends TimedRobot {
     // } catch (ConfigurationFailedException e) {
     //   System.out.println("Configuration failed! " + e);
     // }
+    
+
+
   }
 
   @Override
-  public void robotPeriodic() {
+  public void robotPeriodic() {   
+    
     // LaserCan.Measurement measurement = lc.getMeasurement();
     // if (measurement != null && measurement.status == LaserCan.LASERCAN_STATUS_VALID_MEASUREMENT) {
     //   System.out.println("The target is " + measurement.distance_mm + "mm away!");
     // } else {
     //   System.out.println("Oh no! The target is out of range, or we can't get a reliable measurement!");
     //   // You can still use distance_mm in here, if you're ok tolerating a clamped value or an unreliable measurement.
-    // }
+    // } 
+    
+    double tx = LimelightHelpers.getTX("limelight");
+    PoseEstimate poseEstimate = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight");
+
+    if (poseEstimate != null) {
+        poseXLog.append(poseEstimate.pose.getX());
+        poseYLog.append(poseEstimate.pose.getY());
+        poseRotationLog.append(poseEstimate.pose.getRotation().getDegrees());
+        
+        // Optional: Log the full pose as a string
+        DataLogManager.log("Limelight botpose_orb_wpiblue: " + poseEstimate.pose.toString());
+}
+
+    // Replace this with your actual PoseEstimate
+  
+        
+    
+    
+    txLog.append(tx); 
+    
+
+
+    //DataLogManager.log("Limelight botpose_orb_wpiblue" + LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight"));
     CommandScheduler.getInstance().run(); 
   }
 

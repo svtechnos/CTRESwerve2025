@@ -19,11 +19,15 @@ import edu.wpi.first.wpilibj.smartdashboard.MechanismLigament2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.util.Color;
 import edu.wpi.first.wpilibj.util.Color8Bit;
-
+import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.Joystick;
+import com.ctre.phoenix6.hardware.TalonFXS;
 
 public class Telemetry {
     private final double MaxSpeed;
-
+    private final Joystick joystick = new Joystick(0);
+    private double speed = 0.0;
+    private TalonFXS armMotor = new TalonFXS(1);
     /**
      * Construct a telemetry object, with the specified max speed of the robot
      * 
@@ -127,5 +131,83 @@ public class Telemetry {
 
             SmartDashboard.putData("Module " + i, m_moduleMechanisms[i]);
         }
+
+        if (joystick.getRawButton(1))
+        {
+            speed = 0.15;
+        }
+        else if (joystick.getRawButton(2))
+        {
+            speed = 0.30;
+        }
+        else if (joystick.getRawButton(3))
+        {
+            speed = 0.45;
+        }
+        else if (joystick.getRawButton(4))
+        {
+            speed = 0.60;
+        }
+        else if (joystick.getRawButton(5))
+        {
+            speed = 0.75;
+        }
+        else if (joystick.getRawButton(6))
+        {
+            speed = 0.90;
+        }
+        else if (joystick.getRawButton(7))
+        {
+            speed = 1.0;
+        }
+        SmartDashboard.putNumber("Current Robot Speed:", speed);
+
+
+    }
+    public void setSpeed(){
+        if (joystick.getRawButton(1))
+        {
+            speed = 0.15;
+        }
+        else if (joystick.getRawButton(2))
+        {
+            speed = 0.30;
+        }
+        else if (joystick.getRawButton(3))
+        {
+            speed = 0.45;
+        }
+        else if (joystick.getRawButton(4))
+        {
+            speed = 0.60;
+        }
+        else if (joystick.getRawButton(5))
+        {
+            speed = 0.75;
+        }
+        else if (joystick.getRawButton(6))
+        {
+            speed = 0.90;
+        }
+        else if (joystick.getRawButton(7))
+        {
+            speed = 1.0;
+        }
+        SmartDashboard.putNumber("Current Robot Speed:", speed);
+    }
+
+    public void updVoltage() {
+        double voltage = SmartDashboard.getNumber("Arm Motor Voltage", 0.0);
+        if (voltage < -12.0)
+        {
+            speed = -12.0;
+        }
+        else if (voltage > 12.0)
+        {
+            speed = 12.0;
+        }
+        armMotor.set(voltage);
+        double currentVoltage = armMotor.getMotorVoltage().getValueAsDouble();
+        SmartDashboard.putNumber("Current Arm Motor Voltage: ", currentVoltage);
     }
 }

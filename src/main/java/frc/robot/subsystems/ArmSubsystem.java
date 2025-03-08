@@ -1,16 +1,17 @@
 package frc.robot.subsystems;
 
-import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.hardware.TalonFXS;
+import com.ctre.phoenix6.sim.TalonFXSSimState;
 import com.ctre.phoenix6.controls.PositionDutyCycle;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class ArmSubsystem extends SubsystemBase {
-    private final TalonFX armMotor;
+    private final TalonFXS armMotor;
     private final PositionDutyCycle positionControl = new PositionDutyCycle(0);
 
     public ArmSubsystem(int motorID) {
-        armMotor = new TalonFX(motorID);
-        armMotor.getConfigurator().apply(new com.ctre.phoenix6.configs.TalonFXConfiguration());
+        armMotor = new TalonFXS(motorID);
+       
     }
 
     public void moveArm(double position) {
@@ -21,3 +22,4 @@ public class ArmSubsystem extends SubsystemBase {
         armMotor.set(0);
     }
 }
+    
