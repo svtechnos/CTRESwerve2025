@@ -31,6 +31,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.concurrent.ConcurrentHashMap;
+import frc.robot.LimelightHelpers.PoseEstimate;
+import frc.robot.LimelightHelpers;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.math.estimator.PoseEstimator;
 
 /**
  * LimelightHelpers provides static methods and classes for interfacing with Limelight vision cameras in FRC.
@@ -702,34 +706,41 @@ public class LimelightHelpers {
         }
         return inData[position];
     }
-
-    private static PoseEstimate getBotPoseEstimate(String limelightName, String entryName, boolean isMegaTag2) {
+/*private static PoseEstimate getBotPoseEstimate(String limelightName, String entryName, boolean isMegaTag2) {
         DoubleArrayEntry poseEntry = LimelightHelpers.getLimelightDoubleArrayEntry(limelightName, entryName);
-        
         TimestampedDoubleArray tsValue = poseEntry.getAtomic();
         double[] poseArray = tsValue.value;
         long timestamp = tsValue.timestamp;
         
-        if (poseArray.length == 0) {
-            // Handle the case where no data is available
-            return null; // or some default PoseEstimate
+        // Add debug logging
+        System.out.println("Limelight " + limelightName + " pose array length: " + poseArray.length);
+        if (poseArray.length >= 11) {
+            System.out.println("Translation (x,y,z): " + poseArray[0] + ", " + poseArray[1] + ", " + poseArray[2]);
+            System.out.println("Rotation (roll,pitch,yaw): " + poseArray[3] + ", " + poseArray[4] + ", " + poseArray[5]);
         }
-    
-        var pose = toPose2D(poseArray);
+
+        
+        Translation3d currentTranslation = new Translation3d(poseArray[0], poseArray[1], poseArray[2]);
+        Rotation3d currentRotation = new Rotation3d(Units.degreesToRadians(poseArray[3]),
+                Units.degreesToRadians(poseArray[4]), Units.degreesToRadians(poseArray[4]));
+       // Pose3d currentPose = new Pose3d(currentTranslation, currentRotation);
+        var currentPose = toPose2D(poseArray);
         double latency = extractArrayEntry(poseArray, 6);
         int tagCount = (int)extractArrayEntry(poseArray, 7);
         double tagSpan = extractArrayEntry(poseArray, 8);
         double tagDist = extractArrayEntry(poseArray, 9);
         double tagArea = extractArrayEntry(poseArray, 10);
-        
-        // Convert server timestamp from microseconds to seconds and adjust for latency
         double adjustedTimestamp = (timestamp / 1000000.0) - (latency / 1000.0);
-    
         RawFiducial[] rawFiducials = new RawFiducial[tagCount];
+    if (poseArray.length < 11) {
+            System.out.println("Warning: Invalid pose data received from Limelight " + limelightName);
+           // return new PoseEstimate(new Pose3d(), 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+            return new PoseEstimate(currentPose, adjustedTimestamp, latency, tagCount, tagSpan, tagDist, tagArea, rawFiducials, isMegaTag2);
+        }
+        // Convert server timestamp from microseconds to seconds and adjust for latency
         int valsPerFiducial = 7;
         int expectedTotalVals = 11 + valsPerFiducial * tagCount;
-    
-        if (poseArray.length != expectedTotalVals) {
+if     (poseArray.length != expectedTotalVals) {
             // Don't populate fiducials
         } else {
             for(int i = 0; i < tagCount; i++) {
@@ -744,9 +755,52 @@ public class LimelightHelpers {
                 rawFiducials[i] = new RawFiducial(id, txnc, tync, ta, distToCamera, distToRobot, ambiguity);
             }
         }
-    
-        return new PoseEstimate(pose, adjustedTimestamp, latency, tagCount, tagSpan, tagDist, tagArea, rawFiducials, isMegaTag2);
+        return new PoseEstimate(currentPose, adjustedTimestamp, latency, tagCount, tagSpan, tagDist, tagArea, rawFiducials, isMegaTag2);
+        
     }
+*/
+private static PoseEstimate getBotPoseEstimate(String limelightName, String entryName, boolean isMegaTag2) {
+        DoubleArrayEntry poseEntry = LimelightHelpers.getLimelightDoubleArrayEntry(limelightName, entryName);
+
+        TimestampedDoubleArray tsValue = poseEntry.getAtomic();
+        double[] poseArray = tsValue.value;
+        long timestamp = tsValue.timestamp;
+        if (poseArray.length == 0) {
+            // Handle the case where no data is available
+            return null; // or some default PoseEstimate
+        }
+
+        var pose = toPose2D(poseArray);
+        double latency = extractArrayEntry(poseArray, 6);
+        int tagCount = (int)extractArrayEntry(poseArray, 7);
+        double tagSpan = extractArrayEntry(poseArray, 8);
+        double tagDist = extractArrayEntry(poseArray, 9);
+        double tagArea = extractArrayEntry(poseArray, 10);
+
+        // Convert server timestamp from microseconds to seconds and adjust for latency
+        double adjustedTimestamp = (timestamp / 1000000.0) - (latency / 1000.0);
+
+        RawFiducial[] rawFiducials = new RawFiducial[tagCount];
+        int valsPerFiducial = 7;
+        int expectedTotalVals = 11 + valsPerFiducial * tagCount;
+if (poseArray.length != expectedTotalVals) {
+            // Don't populate fiducials
+        } else {
+            for(int i = 0; i < tagCount; i++) {
+                int baseIndex = 11 + (i * valsPerFiducial);
+                int id = (int)poseArray[baseIndex];
+                double txnc = poseArray[baseIndex + 1];
+                double tync = poseArray[baseIndex + 2];
+                double ta = poseArray[baseIndex + 3];
+                double distToCamera = poseArray[baseIndex + 4];
+                double distToRobot = poseArray[baseIndex + 5];
+                double ambiguity = poseArray[baseIndex + 6];
+                rawFiducials[i] = new RawFiducial(id, txnc, tync, ta, distToCamera, distToRobot, ambiguity);
+            }
+        }
+
+        return new PoseEstimate(pose, adjustedTimestamp, latency, tagCount, tagSpan, tagDist, tagArea, rawFiducials, isMegaTag2);
+    } 
 
     /**
      * Gets the latest raw fiducial/AprilTag detection results from NetworkTables.

@@ -21,9 +21,12 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
+import edu.wpi.first.wpilibj2.command.RunCommand;
 
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
+import frc.robot.subsystems.ArmSubsystem;
+
 
 public class RobotContainer {
     private double MaxSpeed = TunerConstants.kSpeedAt12Volts.in(MetersPerSecond); // kSpeedAt12Volts desired top speed
@@ -41,6 +44,8 @@ public class RobotContainer {
     private final CommandXboxController joystick = new CommandXboxController(0);
 
     public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
+
+    public final ArmSubsystem arm = new ArmSubsystem(0);
 
     //private final SendableChooser<Command> autoChooser;
 
@@ -63,7 +68,9 @@ public class RobotContainer {
             )
         
         );
-        
+
+        arm.setDefaultCommand(new RunCommand(() -> arm.periodic(), arm));
+
         // need to add arm subsytem to the robot container here 
 
         joystick.a().whileTrue(drivetrain.applyRequest(() -> brake));
