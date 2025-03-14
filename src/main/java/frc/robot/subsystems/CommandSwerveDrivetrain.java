@@ -125,18 +125,18 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     /* The SysId routine to test */
     private SysIdRoutine m_sysIdRoutineToApply = m_sysIdRoutineTranslation;
     private SwerveDrivePoseEstimator m_poseEstimator = new SwerveDrivePoseEstimator(
-                                                                                    getKinematics(), // swerve drive kinematics
-                                                                                    kBlueAlliancePerspectiveRotation,  // current gyro angle
-                                                                                    new SwerveModulePosition[] // swerve module pose
-                                                                                                                {
-                                                                                                                    getModule(0).getPosition(true),
-                                                                                                                    getModule(1).getPosition(true), 
-                                                                                                                    getModule(2).getPosition(true), 
-                                                                                                                    getModule(3).getPosition(true)
-                                                                                                                },
-                                                                                    new Pose2d(), // init pose
-                                                                                    VecBuilder.fill(0.05,0.05,Units.degreesToRadians(5)), // odometry errors
-                                                                                    VecBuilder.fill(0.5,0.5,Units.degreesToRadians(30))); // april tag errors
+        getKinematics(), // swerve drive kinematics
+        kBlueAlliancePerspectiveRotation,  // current gyro angle
+        new SwerveModulePosition[] // swerve module pose
+            {
+                getModule(0).getPosition(true),
+                getModule(1).getPosition(true), 
+                getModule(2).getPosition(true), 
+                getModule(3).getPosition(true)
+            },
+        new Pose2d(), // init pose
+        VecBuilder.fill(0.05,0.05,Units.degreesToRadians(5)), // odometry errors
+        VecBuilder.fill(0.5,0.5,Units.degreesToRadians(30))); // april tag errors
                                                                                     
 
     private Pigeon2 m_gyro = getPigeon2();
