@@ -8,6 +8,7 @@ import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.LimelightHelpers.PoseEstimate;
+import frc.robot.LimelightHelpers;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.util.datalog.DoubleLogEntry;
 
@@ -21,6 +22,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.math.estimator.PoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.cameraserver.CameraServer;
 
 
 
@@ -51,6 +53,7 @@ public class Robot extends TimedRobot {
   public void robotInit() {
     DataLogManager.start(); 
     DataLogManager.log("Started");
+    CameraServer.startAutomaticCapture("camera", 0);
     txLog = new DoubleLogEntry(DataLogManager.getLog(), "Limelight/tx");
     poseXLog = new DoubleLogEntry(DataLogManager.getLog(), "Limelight/botpose_orb_wpiblue/X");
     poseYLog = new DoubleLogEntry(DataLogManager.getLog(), "Limelight/botpose_orb_wpiblue/Y");
@@ -103,35 +106,36 @@ public class Robot extends TimedRobot {
     
     txLog.append(tx); 
     
- if (Timer.getFPGATimestamp() - lastUpdateTime < UPDATE_PERIOD) return;
-        lastUpdateTime = Timer.getFPGATimestamp();
+  // if (Timer.getFPGATimestamp() - lastUpdateTime < UPDATE_PERIOD) return;
+  //       lastUpdateTime = Timer.getFPGATimestamp();
 
-        // Get pose estimate from Limelight
-        LimelightHelpers.PoseEstimate PoseEstimate = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-threeg");
-        Pose2d pose1 = PoseEstimate.pose;
-        value++;
+  //       // Get pose estimate from Limelight
+        
+  //        LimelightHelpers.PoseEstimate PoseEstimate = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-threeg");
+  //       Pose2d pose1 = PoseEstimate.pose;
+  //       value++;
 
-        // Check if data is valid
-        boolean hasTarget = LimelightHelpers.getLatestResults("limelight-threeg").valid;
-        int tagCount = PoseEstimate.tagCount;
-        double avgTagDist = PoseEstimate.avgTagDist;
+  //       // Check if data is valid
+  //       boolean hasTarget = LimelightHelpers.getLatestResults("limelight-threeg").valid;
+  //       int tagCount = PoseEstimate.tagCount;
+  //       double avgTagDist = PoseEstimate.avgTagDist;
 
-        // Push to SmartDashboard
-        SmartDashboard.putNumber("Pose_X", pose1.getX());
-        SmartDashboard.putNumber("Pose_Y", pose1.getY());
-        SmartDashboard.putNumber("Pose_Rotation_Deg", pose1.getRotation().getDegrees());
-        SmartDashboard.putNumber("Counter", value1);
-        SmartDashboard.putBoolean("Has_Target", hasTarget);
-        SmartDashboard.putNumber("Tag_Count", tagCount);
-        SmartDashboard.putNumber("Avg_Tag_Distance", avgTagDist);
+  //       // Push to SmartDashboard
+  //       SmartDashboard.putNumber("Pose_X", pose1.getX());
+  //       SmartDashboard.putNumber("Pose_Y", pose1.getY());
+  //       SmartDashboard.putNumber("Pose_Rotation_Deg", pose1.getRotation().getDegrees());
+  //       SmartDashboard.putNumber("Counter", value1);
+  //       SmartDashboard.putBoolean("Has_Target", hasTarget);
+  //       SmartDashboard.putNumber("Tag_Count", tagCount);
+  //       SmartDashboard.putNumber("Avg_Tag_Distance", avgTagDist);
 
-        // Debug to console for raw values
-        if (tagCount > 0) {
-            System.out.println("Pose X: " + pose1.getX() + ", Y: " + pose1.getY() + ", Rot: " + pose1.getRotation().getDegrees());
-        } else {
-            System.out.println("No tags detected!");
-        }
-    }
+  //       // Debug to console for raw values
+  //       if (tagCount > 0) {
+  //           System.out.println("Pose X: " + pose1.getX() + ", Y: " + pose1.getY() + ", Rot: " + pose1.getRotation().getDegrees());
+  //       } else {
+  //           System.out.println("No tags detected!");
+  //       }
+  //   } 
   
   /*  DataLogManager.log("Limelight botpose_orb_wpiblue" + LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-threeg"));
     CommandScheduler.getInstance().run(); 
@@ -146,7 +150,8 @@ public class Robot extends TimedRobot {
     SmartDashboard.putNumber("Number: ", value);
 
     SmartDashboard.updateValues(); 
-  } */
+  */
+}
 
   @Override
   public void disabledInit() {}

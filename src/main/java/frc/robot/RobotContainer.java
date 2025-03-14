@@ -26,6 +26,7 @@ import edu.wpi.first.wpilibj2.command.RunCommand;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.ArmSubsystem;
+import frc.robot.commands.MoveArm;
 
 
 public class RobotContainer {
@@ -45,14 +46,17 @@ public class RobotContainer {
 
     public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
 
-    public final ArmSubsystem arm = new ArmSubsystem(0);
-
+    private final ArmSubsystem arm;
+    private final MoveArm moveArmCommand;
     //private final SendableChooser<Command> autoChooser;
 
     public RobotContainer() {
+        arm = new ArmSubsystem();
+        moveArmCommand = new MoveArm(arm, 0);
         //autoChooser = AutoBuilder.buildAutoChooser("Tests");
         //SmartDashboard.putData("Auto Mode", autoChooser);
         configureBindings();
+
     }
 
     private void configureBindings() {
@@ -68,8 +72,6 @@ public class RobotContainer {
             )
         
         );
-
-        arm.setDefaultCommand(new RunCommand(() -> arm.periodic(), arm));
 
         // need to add arm subsytem to the robot container here 
 
@@ -89,12 +91,14 @@ public class RobotContainer {
         joystick.leftBumper().onTrue(drivetrain.runOnce(() -> drivetrain.seedFieldCentric()));
 
         drivetrain.registerTelemetry(logger::telemeterize);
+        
     }
 
     public Command getAutonomousCommand() {
+        return moveArmCommand;
         /* Run the path selected from the auto chooser */
         //return autoChooser.getSelected();
-        return new PathPlannerAuto("New Auto");
+        
     }
 
 }

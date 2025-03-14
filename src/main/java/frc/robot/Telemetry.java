@@ -27,7 +27,7 @@ public class Telemetry {
     private final double MaxSpeed;
     private final Joystick joystick = new Joystick(0);
     private double speed = 0.0;
-    private TalonFXS armMotor = new TalonFXS(0);
+   
     /**
      * Construct a telemetry object, with the specified max speed of the robot
      * 
@@ -196,20 +196,7 @@ public class Telemetry {
         SmartDashboard.putNumber("Current Robot Speed:", speed);
     }
 
-    public void updVoltage() {
-        double voltage = SmartDashboard.getNumber("Arm Motor Voltage", 0.0);
-        if (voltage < -12.0)
-        {
-            voltage = -12.0;
-        }
-        else if (voltage > 12.0)
-        {
-            voltage = 12.0;
-            armMotor.set(voltage);
-         double currentVoltage = armMotor.getMotorVoltage().getValueAsDouble();
-        SmartDashboard.putNumber("Arm Motor Voltage: ", currentVoltage);
-        }
-        
-    }
+   
+    
     
 }

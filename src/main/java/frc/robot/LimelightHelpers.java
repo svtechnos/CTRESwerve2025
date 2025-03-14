@@ -764,8 +764,10 @@ private static PoseEstimate getBotPoseEstimate(String limelightName, String entr
 
         TimestampedDoubleArray tsValue = poseEntry.getAtomic();
         double[] poseArray = tsValue.value;
+        //System.out.println("Pose Array:" + poseArray);
         long timestamp = tsValue.timestamp;
         if (poseArray.length == 0) {
+            //System.out.println("was null");
             // Handle the case where no data is available
             return null; // or some default PoseEstimate
         }
