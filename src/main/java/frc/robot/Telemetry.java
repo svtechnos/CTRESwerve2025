@@ -19,15 +19,10 @@ import edu.wpi.first.wpilibj.smartdashboard.MechanismLigament2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.util.Color;
 import edu.wpi.first.wpilibj.util.Color8Bit;
-import edu.wpi.first.wpilibj.TimedRobot;
-import edu.wpi.first.wpilibj.Joystick;
-import com.ctre.phoenix6.hardware.TalonFXS;
 
 public class Telemetry {
     private final double MaxSpeed;
-    private final Joystick joystick = new Joystick(0);
-    private double speed = 0.0;
-   
+
     /**
      * Construct a telemetry object, with the specified max speed of the robot
      * 
@@ -43,7 +38,6 @@ public class Telemetry {
 
     /* Robot swerve drive state */
     private final NetworkTable driveStateTable = inst.getTable("DriveState");
-    private final NetworkTable limelightTable = inst.getTable("limelight");
     private final StructPublisher<Pose2d> drivePose = driveStateTable.getStructTopic("Pose", Pose2d.struct).publish();
     private final StructPublisher<ChassisSpeeds> driveSpeeds = driveStateTable.getStructTopic("Speeds", ChassisSpeeds.struct).publish();
     private final StructArrayPublisher<SwerveModuleState> driveModuleStates = driveStateTable.getStructArrayTopic("ModuleStates", SwerveModuleState.struct).publish();
@@ -51,7 +45,6 @@ public class Telemetry {
     private final StructArrayPublisher<SwerveModulePosition> driveModulePositions = driveStateTable.getStructArrayTopic("ModulePositions", SwerveModulePosition.struct).publish();
     private final DoublePublisher driveTimestamp = driveStateTable.getDoubleTopic("Timestamp").publish();
     private final DoublePublisher driveOdometryFrequency = driveStateTable.getDoubleTopic("OdometryFrequency").publish();
-    private final DoublePublisher limleightTx   = limelightTable.getDoubleTopic("tx").publish();
 
     /* Robot pose for field positioning */
     private final NetworkTable table = inst.getTable("Pose");
@@ -87,12 +80,9 @@ public class Telemetry {
     private final double[] m_poseArray = new double[3];
     private final double[] m_moduleStatesArray = new double[8];
     private final double[] m_moduleTargetsArray = new double[8];
-    double tx = LimelightHelpers.getTX("");
-  
 
     /** Accept the swerve drive state and telemeterize it to SmartDashboard and SignalLogger. */
     public void telemeterize(SwerveDriveState state) {
-        tx = LimelightHelpers.getTX("");
         /* Telemeterize the swerve drive state */
         drivePose.set(state.Pose);
         driveSpeeds.set(state.Speeds);
@@ -117,7 +107,6 @@ public class Telemetry {
         SignalLogger.writeDoubleArray("DriveState/ModuleStates", m_moduleStatesArray);
         SignalLogger.writeDoubleArray("DriveState/ModuleTargets", m_moduleTargetsArray);
         SignalLogger.writeDouble("DriveState/OdometryPeriod", state.OdometryPeriod, "seconds");
-        SignalLogger.writeDouble("Limelight/tx", tx, "degrees");
 
         /* Telemeterize the pose to a Field2d */
         fieldTypePub.set("Field2d");
@@ -131,72 +120,5 @@ public class Telemetry {
 
             SmartDashboard.putData("Module " + i, m_moduleMechanisms[i]);
         }
-
-        if (joystick.getRawButton(1))
-        {
-            speed = 0.15;
-        }
-        else if (joystick.getRawButton(2))
-        {
-            speed = 0.30;
-        }
-        else if (joystick.getRawButton(3))
-        {
-            speed = 0.45;
-        }
-        else if (joystick.getRawButton(4))
-        {
-            speed = 0.60;
-        }
-        else if (joystick.getRawButton(5))
-        {
-            speed = 0.75;
-        }
-        else if (joystick.getRawButton(6))
-        {
-            speed = 0.90;
-        }
-        else if (joystick.getRawButton(7))
-        {
-            speed = 1.0;
-        }
-        SmartDashboard.putNumber("Current Robot Speed:", speed);
-
-
     }
-    public void setSpeed(){
-        if (joystick.getRawButton(1))
-        {
-            speed = 0.15;
-        }
-        else if (joystick.getRawButton(2))
-        {
-            speed = 0.30;
-        }
-        else if (joystick.getRawButton(3))
-        {
-            speed = 0.45;
-        }
-        else if (joystick.getRawButton(4))
-        {
-            speed = 0.60;
-        }
-        else if (joystick.getRawButton(5))
-        {
-            speed = 0.75;
-        }
-        else if (joystick.getRawButton(6))
-        {
-            speed = 0.90;
-        }
-        else if (joystick.getRawButton(7))
-        {
-            speed = 1.0;
-        }
-        SmartDashboard.putNumber("Current Robot Speed:", speed);
-    }
-
-   
-    
-    
 }
