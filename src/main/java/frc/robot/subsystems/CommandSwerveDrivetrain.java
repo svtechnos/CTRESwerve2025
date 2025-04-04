@@ -6,6 +6,7 @@ import static edu.wpi.first.units.Units.*;
 import java.util.function.Supplier;
 
 import com.ctre.phoenix6.SignalLogger;
+import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.Utils;
 import com.ctre.phoenix6.swerve.SwerveDrivetrainConstants;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
@@ -27,6 +28,7 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Notifier;
@@ -143,6 +145,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private Pigeon2 m_gyro = getPigeon2();
 
 
+
     /**
      * Constructs a CTRE SwerveDrivetrain using the specified constants.
      * <p>
@@ -223,12 +226,19 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         configureAutoBuilder();
     }
 
+    
     private void configureAutoBuilder() {
         try {
             var config = RobotConfig.fromGUISettings();
+            //Prasad: added this to try resetting the pigeon's yaw when the robot starts
+            //m_gyro.reset();
+            resetRotation(new Rotation2d(0));
+            StatusCode statusCode = getPigeon2().setYaw(0.0);
+            System.out.println("statusCode is "+statusCode);
+            System.out.println("pegion yaw is "+getPigeon2().getYaw());
             AutoBuilder.configure(
-                () -> getState().Pose,
-                // () -> m_poseEstimator.getEstimatedPosition(),   // Supplier of current robot pose
+                //() -> getState().Pose,
+                () -> m_poseEstimator.getEstimatedPosition(),   // Supplier of current robot pose
                 this::resetPose,         // Consumer for seeding pose against auto
                 () -> getState().Speeds, // Supplier of current robot speeds
                 // Consumer of ChassisSpeeds and feedforwards to drive the robot
@@ -287,7 +297,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
 
     @Override
     public void periodic() {
-        System.out.println("Pose Estimator: " + m_poseEstimator);
+        //System.out.println("Pose Estimator: " + m_poseEstimator);
         // System.out.println("Gyro: " + m_gyro);
         // System.out.println("Pose Estimated Position " + m_poseEstimator.getEstimatedPosition());
         /*
@@ -299,7 +309,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
          */
 
 
-
+        //System.out.println("Yaw from periodic is "+getPigeon2().getYaw(true));
 
 
         if (!m_hasAppliedOperatorPerspective || DriverStation.isDisabled()) {
@@ -312,27 +322,88 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
                 m_hasAppliedOperatorPerspective = true;
             });
         }   
-        // Integrate Limelight vision updates
-        // LimelightHelpers.SetRobotOrientation("limelight", m_poseEstimator.getEstimatedPosition().getRotation().getDegrees(), 0, 0, 0, 0, 0);
-        // LimelightHelpers.PoseEstimate mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight");
-        // boolean doRejectUpdate = false;
-        // if (Math.abs(m_gyro.getRate()) > 720) // if our angular velocity is greater than 720 degrees per second, ignore vision updates
-        // {
-        //     doRejectUpdate = true;
-        // }
-        // if (mt2.tagCount == 0)
-        // {
-        //     doRejectUpdate = true;
-        // }
-        // if (!doRejectUpdate)
-        // {
-        //     m_poseEstimator.setVisionMeasurementStdDevs(VecBuilder.fill(.7, .7, 9999999));
-        //     m_poseEstimator.addVisionMeasurement(
-        //         mt2.pose,
-        //         mt2.timestampSeconds);
-        // }
 
+      
+    //Uncomment this to use limelight
+    useLimelight();
+ 
 
+    }
+
+    private void useLimelight() {
+        //LimelightHelpers.PoseEstimate mt = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-threeg");
+             //System.out.println("mt pose x: " + mt.pose.getX());
+             //System.out.println("mt pose y: " + mt.pose.getY());
+             //System.out.println("mt pose theta: " + mt.pose.getRotation().getDegrees());
+             //System.out.println("mt timestamp: " + mt.timestampSeconds);
+        
+        boolean useMegaTag2 = false; //set to false to use MegaTag1
+        boolean doRejectUpdate = false;
+        if(useMegaTag2 == false)
+        {
+        
+            LimelightHelpers.PoseEstimate mt1 = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-threeg");
+          if (mt1!=null) {
+            if(mt1.tagCount == 1 && mt1.rawFiducials.length == 1)
+          {
+            if(mt1.rawFiducials[0].ambiguity > .7)
+            {
+              doRejectUpdate = true;
+            }
+            if(mt1.rawFiducials[0].distToCamera > 3)
+            {
+              doRejectUpdate = true;
+            }
+          }
+          if(mt1.tagCount == 0)
+          {
+            doRejectUpdate = true;
+          }
+
+          if(!doRejectUpdate)
+          {
+            double[] stddevs = NetworkTableInstance.getDefault().getTable("limelight-threeg").getEntry("stddevs").getDoubleArray(new double[]{0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7});
+            // The 7th element (index 6) is the x stddev and the 8th element (index 7) is the y stddev
+            double xStdDev = stddevs.length > 0 ? stddevs[0] : 0.7;
+            double yStdDev = stddevs.length > 1 ? stddevs[1] : 0.7;
+            m_poseEstimator.setVisionMeasurementStdDevs(VecBuilder.fill(xStdDev,yStdDev,9999999));
+            m_poseEstimator.addVisionMeasurement(
+                mt1.pose,
+                mt1.timestampSeconds);
+          }
+        }
+    }
+        else if (useMegaTag2 == true)
+        {
+        //System.out.println("m_gyro.getYaw().getValueAsDouble()"+m_gyro.getYaw().getValueAsDouble());
+          LimelightHelpers.SetRobotOrientation("limelight-threeg", 
+          m_gyro.getYaw().getValueAsDouble(), 
+            0, 0, 0, 0, 0);
+          LimelightHelpers.PoseEstimate mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight-threeg");
+            if (mt2!=null) {
+                
+            
+         
+          if(Math.abs(m_gyro.getRate()) > 360) // if our angular velocity is greater than 720 degrees per second, ignore vision updates
+          {
+            doRejectUpdate = true;
+          }
+          if(mt2.tagCount == 0)
+          {
+            doRejectUpdate = true;
+          }
+          double[] stddevs = NetworkTableInstance.getDefault().getTable("limelight-threeg").getEntry("stddevs").getDoubleArray(new double[]{0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7});
+          double xStdDev = stddevs.length > 0 ? stddevs[6] : 0.7;
+          double yStdDev = stddevs.length > 1 ? stddevs[7] : 0.7;
+          if(!doRejectUpdate)
+          {
+            m_poseEstimator.setVisionMeasurementStdDevs(VecBuilder.fill(xStdDev,yStdDev,9999999));
+            m_poseEstimator.addVisionMeasurement(
+                mt2.pose,
+                mt2.timestampSeconds);
+          }
+        }
+    }
     }
 
     private void startSimThread() {

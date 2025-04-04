@@ -1,4 +1,4 @@
-//LimelightHelpers v1.11 (REQUIRES LLOS 2025.0 OR LATER)
+//LimelightHelpers v1.12 (REQUIRES LLOS 2025.0 OR LATER)
 
 package frc.robot;
 
@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -31,10 +32,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.concurrent.ConcurrentHashMap;
-import frc.robot.LimelightHelpers.PoseEstimate;
-import frc.robot.LimelightHelpers;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.math.estimator.PoseEstimator;
 
 /**
  * LimelightHelpers provides static methods and classes for interfacing with Limelight vision cameras in FRC.
@@ -491,6 +488,21 @@ public class LimelightHelpers {
             this.distToRobot = distToRobot;
             this.ambiguity = ambiguity;
         }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+            if (obj == null || getClass() != obj.getClass()) return false;
+            RawFiducial other = (RawFiducial) obj;
+            return id == other.id &&
+                Double.compare(txnc, other.txnc) == 0 &&
+                Double.compare(tync, other.tync) == 0 &&
+                Double.compare(ta, other.ta) == 0 &&
+                Double.compare(distToCamera, other.distToCamera) == 0 &&
+                Double.compare(distToRobot, other.distToRobot) == 0 &&
+                Double.compare(ambiguity, other.ambiguity) == 0;
+        }
+
     }
 
     /**
@@ -574,6 +586,22 @@ public class LimelightHelpers {
             this.avgTagArea = avgTagArea;
             this.rawFiducials = rawFiducials;
             this.isMegaTag2 = isMegaTag2;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+            if (obj == null || getClass() != obj.getClass()) return false;
+            PoseEstimate that = (PoseEstimate) obj;
+            // We don't compare the timestampSeconds as it isn't relevant for equality and makes
+            // unit testing harder
+            return Double.compare(that.latency, latency) == 0
+                && tagCount == that.tagCount
+                && Double.compare(that.tagSpan, tagSpan) == 0
+                && Double.compare(that.avgTagDist, avgTagDist) == 0
+                && Double.compare(that.avgTagArea, avgTagArea) == 0
+                && pose.equals(that.pose)
+                && Arrays.equals(rawFiducials, that.rawFiducials);
         }
 
     }
@@ -706,86 +734,34 @@ public class LimelightHelpers {
         }
         return inData[position];
     }
-/*private static PoseEstimate getBotPoseEstimate(String limelightName, String entryName, boolean isMegaTag2) {
+
+    private static PoseEstimate getBotPoseEstimate(String limelightName, String entryName, boolean isMegaTag2) {
         DoubleArrayEntry poseEntry = LimelightHelpers.getLimelightDoubleArrayEntry(limelightName, entryName);
+        
         TimestampedDoubleArray tsValue = poseEntry.getAtomic();
         double[] poseArray = tsValue.value;
         long timestamp = tsValue.timestamp;
         
-        // Add debug logging
-        System.out.println("Limelight " + limelightName + " pose array length: " + poseArray.length);
-        if (poseArray.length >= 11) {
-            System.out.println("Translation (x,y,z): " + poseArray[0] + ", " + poseArray[1] + ", " + poseArray[2]);
-            System.out.println("Rotation (roll,pitch,yaw): " + poseArray[3] + ", " + poseArray[4] + ", " + poseArray[5]);
-        }
-
-        
-        Translation3d currentTranslation = new Translation3d(poseArray[0], poseArray[1], poseArray[2]);
-        Rotation3d currentRotation = new Rotation3d(Units.degreesToRadians(poseArray[3]),
-                Units.degreesToRadians(poseArray[4]), Units.degreesToRadians(poseArray[4]));
-       // Pose3d currentPose = new Pose3d(currentTranslation, currentRotation);
-        var currentPose = toPose2D(poseArray);
-        double latency = extractArrayEntry(poseArray, 6);
-        int tagCount = (int)extractArrayEntry(poseArray, 7);
-        double tagSpan = extractArrayEntry(poseArray, 8);
-        double tagDist = extractArrayEntry(poseArray, 9);
-        double tagArea = extractArrayEntry(poseArray, 10);
-        double adjustedTimestamp = (timestamp / 1000000.0) - (latency / 1000.0);
-        RawFiducial[] rawFiducials = new RawFiducial[tagCount];
-    if (poseArray.length < 11) {
-            System.out.println("Warning: Invalid pose data received from Limelight " + limelightName);
-           // return new PoseEstimate(new Pose3d(), 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-            return new PoseEstimate(currentPose, adjustedTimestamp, latency, tagCount, tagSpan, tagDist, tagArea, rawFiducials, isMegaTag2);
-        }
-        // Convert server timestamp from microseconds to seconds and adjust for latency
-        int valsPerFiducial = 7;
-        int expectedTotalVals = 11 + valsPerFiducial * tagCount;
-if     (poseArray.length != expectedTotalVals) {
-            // Don't populate fiducials
-        } else {
-            for(int i = 0; i < tagCount; i++) {
-                int baseIndex = 11 + (i * valsPerFiducial);
-                int id = (int)poseArray[baseIndex];
-                double txnc = poseArray[baseIndex + 1];
-                double tync = poseArray[baseIndex + 2];
-                double ta = poseArray[baseIndex + 3];
-                double distToCamera = poseArray[baseIndex + 4];
-                double distToRobot = poseArray[baseIndex + 5];
-                double ambiguity = poseArray[baseIndex + 6];
-                rawFiducials[i] = new RawFiducial(id, txnc, tync, ta, distToCamera, distToRobot, ambiguity);
-            }
-        }
-        return new PoseEstimate(currentPose, adjustedTimestamp, latency, tagCount, tagSpan, tagDist, tagArea, rawFiducials, isMegaTag2);
-        
-    }
-*/
-private static PoseEstimate getBotPoseEstimate(String limelightName, String entryName, boolean isMegaTag2) {
-        DoubleArrayEntry poseEntry = LimelightHelpers.getLimelightDoubleArrayEntry(limelightName, entryName);
-
-        TimestampedDoubleArray tsValue = poseEntry.getAtomic();
-        double[] poseArray = tsValue.value;
-        //System.out.println("Pose Array:" + poseArray);
-        long timestamp = tsValue.timestamp;
         if (poseArray.length == 0) {
-            //System.out.println("was null");
             // Handle the case where no data is available
             return null; // or some default PoseEstimate
         }
-
+    
         var pose = toPose2D(poseArray);
         double latency = extractArrayEntry(poseArray, 6);
         int tagCount = (int)extractArrayEntry(poseArray, 7);
         double tagSpan = extractArrayEntry(poseArray, 8);
         double tagDist = extractArrayEntry(poseArray, 9);
         double tagArea = extractArrayEntry(poseArray, 10);
-
+        
         // Convert server timestamp from microseconds to seconds and adjust for latency
         double adjustedTimestamp = (timestamp / 1000000.0) - (latency / 1000.0);
-
+    
         RawFiducial[] rawFiducials = new RawFiducial[tagCount];
         int valsPerFiducial = 7;
         int expectedTotalVals = 11 + valsPerFiducial * tagCount;
-if (poseArray.length != expectedTotalVals) {
+    
+        if (poseArray.length != expectedTotalVals) {
             // Don't populate fiducials
         } else {
             for(int i = 0; i < tagCount; i++) {
@@ -800,9 +776,9 @@ if (poseArray.length != expectedTotalVals) {
                 rawFiducials[i] = new RawFiducial(id, txnc, tync, ta, distToCamera, distToRobot, ambiguity);
             }
         }
-
+    
         return new PoseEstimate(pose, adjustedTimestamp, latency, tagCount, tagSpan, tagDist, tagArea, rawFiducials, isMegaTag2);
-    } 
+    }
 
     /**
      * Gets the latest raw fiducial/AprilTag detection results from NetworkTables.
@@ -1319,6 +1295,18 @@ if (poseArray.length != expectedTotalVals) {
         return toPose2D(result);
     }
 
+    
+    
+    /**
+     * Gets the MegaTag1 Pose2d and timestamp for use with WPILib pose estimator (addVisionMeasurement) in the its own coordinate system.
+     * 
+     * @param limelightName
+     * @return
+     */
+    public static PoseEstimate getBotPoseEstimate(String limelightName) {
+        return getBotPoseEstimate(limelightName, "botpose", false);
+    }
+    
     /**
      * Gets the MegaTag1 Pose2d and timestamp for use with WPILib pose estimator (addVisionMeasurement) in the WPILib Blue alliance coordinate system.
      * 
@@ -1372,7 +1360,7 @@ if (poseArray.length != expectedTotalVals) {
      */
     public static PoseEstimate getBotPoseEstimate_wpiRed_MegaTag2(String limelightName) {
         return getBotPoseEstimate(limelightName, "botpose_orb_wpired", true);
-    }   
+    }
 
     /**
      * Gets the Pose2d for easy use with Odometry vision pose estimator
@@ -1538,6 +1526,27 @@ if (poseArray.length != expectedTotalVals) {
      */
     public static void SetIMUMode(String limelightName, int mode) {
         setLimelightNTDouble(limelightName, "imumode_set", mode);
+    }
+
+    /**
+     * Configures the complementary filter alpha value for IMU Assist Modes (Modes 3 and 4)
+     * 
+     * @param limelightName Name/identifier of the Limelight
+     * @param alpha Defaults to .001. Higher values will cause the internal IMU to converge onto the assist source more rapidly.
+     */
+    public static void SetIMUAssistAlpha(String limelightName, double alpha) {
+        setLimelightNTDouble(limelightName, "imuassistalpha_set", alpha);
+    }
+
+    
+    /**
+     * Configures the throttle value. Set to 100-200 while disabled to reduce thermal output/temperature.
+     * 
+     * @param limelightName Name/identifier of the Limelight
+     * @param throttle Defaults to 0. Your Limelgiht will process one frame after skipping <throttle> frames.
+     */
+    public static void SetThrottle(String limelightName, int throttle) {
+        setLimelightNTDouble(limelightName, "throttle_set", throttle);
     }
 
     /**
